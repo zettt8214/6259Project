@@ -104,10 +104,9 @@ from memfren import *
 
 vol = volhandel.VolatiltyHandler()
 vol.get_image_info("D:/Share/test.elf")
-vol.get_network_connections()
+vol.get_runkey_from_reg()
 # import re
-# c = "0x7e0b3340	TCPv4	0.0.0.0	49153	0.0.0.0	0	LISTENING	776	svchost.exe	-"
-# r = "(0x.+)\s+(TCPv\d)\s+(::|\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+(::|\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+(LISTENING|ESTABLISHED|CLOSED|CLOSE_WAIT)\s+(\d+)\s+(\w+)\s+(.+)"
-#
+# c = "2009-07-14 04:45:47.000000      0xf8a001ba9010  REG_EXPAND_SZ   \??\C:\Windows\\ServiceProfiles\\NetworkService\\NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Run  Sidebar \"%ProgramFiles%\Windows Sidebar\Sid\" False"
+# r = "\"(.+)\""
 # results = re.search(r, c)
 # print(results.groups())

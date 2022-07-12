@@ -48,7 +48,7 @@ class VolatiltyHandler():
         :return: Will return a 1 in case of an error
         '''
 
-        self._error_handler.error_log(1, "Getting image type...")
+        self._error_handler.error_log(1, "Getting image information...")
 
         self._image_location = str(imagelocation)
         print(vol_path)
@@ -206,7 +206,7 @@ class VolatiltyHandler():
         and by UDP but i don't think you want to go into this...
         '''
 
-        self._error_handler.error_log(1, "Getting network traffic information'")
+        self._error_handler.error_log(1, "Getting network traffic information")
 
         class net_socket(object):
             def __init__(self):
@@ -215,12 +215,8 @@ class VolatiltyHandler():
         tcp_array = []
         udp_array = []
 
-        #tcp_regex = "(0x........)\s(TCPv\d)\s+(.+):(\d{1,5})\s+(.+):(\d{1,5})\s+(LISTENING | ESTABLISHED | CLOSED | CLOSE_WAIT)\s+([0-9-]+)\s+(.+)"
-        tcp_regex = "(0x.+)\s+(TCPv\d)\s+(::|\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+(::|\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+(LISTENING|ESTABLISHED|CLOSED|CLOSE_WAIT)\s+(\d+)\s+(\w+)\s+(.+)"
-        udp_regex = "(0x.+)\s(UDPv\d)\s+(.+):(\d{1,5})\s+[*:]{3}\s+([0-9-]+)\s+([a-zA-Z.-]+)\s+([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} UTC[0-9+]+)"
-
-        xp = self._image_type.find("WinXP")
-        sev = self._image_type.find("Win7")
+        tcp_regex = "(0x.+)\s+(TCPv\d)\s+(.{4}::.{4}:.{4}:.{4}:.{4}|::|\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+(.{4}::.{4}:.{4}:.{4}:.{4}|::|\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+(LISTENING|ESTABLISHED|CLOSED|CLOSE_WAIT)\s+(\d+)\s+(\S+)\s+(.+)"
+        udp_regex = "(0x.{8})\s+(UDPv\d)\s+(.{4}::.{4}:.{4}:.{4}:.{4}|::|\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+(\*|.{4}::.{4}:.{4}:.{4}:.{4}|::|\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.+)"
 
         command = "python " + self._volname + " -f " + self._image_location + " windows.netscan.NetScan"
         status, output = subprocess.getstatusoutput(command)
@@ -245,9 +241,9 @@ class VolatiltyHandler():
                     current_conn.ver = temp[1]
                     current_conn.bind_add = temp[2]
                     current_conn.bind_port = temp[3]
-                    current_conn.pid = temp[4]
-                    current_conn.p_name = temp[5]
-                    current_conn.time = temp[6]
+                    current_conn.pid = temp[6]
+                    current_conn.p_name = temp[7]
+                    current_conn.time = temp[8]
                     udp_array.append(current_conn)
                 except:
                     continue
@@ -255,8 +251,6 @@ class VolatiltyHandler():
             elif tcp == 11:
                 # This is a TCP Connection
                 try:
-                    print("tcp")
-                    print(connection)
                     temp = self.regex_search(connection, tcp_regex)
                     temp = temp.groups()
                     print(temp)
@@ -269,6 +263,7 @@ class VolatiltyHandler():
                     current_conn.remote_port = temp[5]
                     current_conn.state = temp[6]
                     current_conn.pid = temp[7]
+                    current_conn.p_name = temp[8]
                     tcp_array.append(current_conn)
                 except:
                     continue
@@ -281,3 +276,35 @@ class VolatiltyHandler():
         self._connections_udp = udp_array
         self._error_handler.error_log(0, "Found %s UDP Connections" % len(udp_array))
         self._error_handler.error_log(0, "Found %s TCP Connections" % len(tcp_array))
+
+    def get_runkey_from_reg(self):
+        '''
+        This will take all registry keys (and values) in CurrentVersion\Run
+        and add them to the global array of self._startup_keys .
+        :return:nothing
+        '''
+        startup_array = []
+
+        regex_for_keys = "\"(.+)\""
+
+        self._error_handler.error_log(1, "Getting what's in the CurrentVersion\Run in Registry'")
+
+        command = "python " + self._volname + " -f " + self._image_location + " windows.registry.printkey --key \"Software\Microsoft\Windows\CurrentVersion\Run\""
+        status, output = subprocess.getstatusoutput(command)
+
+        output = output.split('\n')
+        print(output)
+        if len(output) == 0:
+            self._error_handler.error_log(1, "Finding startup keys command returned 0 results")
+            return 1
+
+        for line in output:
+            temp = self.regex_search(line, regex_for_keys)
+            try:
+                temp = temp.groups()
+                startup_array.append(temp[0])
+            except:
+                pass
+
+        self._startup_keys = startup_array
+        self._error_handler.error_log(0, "Found %s startup keys" % len(self._startup_keys))
